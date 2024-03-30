@@ -25,6 +25,9 @@ timer_font = pygame.font.Font(None, 36)  # Adjust the size as needed
 # Load card back image
 card_back = pygame.image.load("card_back.png")
 
+# Load sound effects
+match_sound = pygame.mixer.Sound("match_sound.wav")
+
 # Generate card images
 card_images = []
 for i in range(6):
@@ -106,6 +109,7 @@ while running:
                 if first_card["image"] == second_card["image"]:
                     first_card = None
                     second_card = None
+                    match_sound.play()  # Play the match sound
                 else:
                     non_matching_timer = pygame.time.get_ticks()  # Start the timer
 
