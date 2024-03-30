@@ -19,10 +19,14 @@ RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
 LIGHT_PINK = (255, 192, 203)  # Light pink color
+PINK1 = (255, 136, 202)
+FUCHSIA = (255, 92, 170)
+PURPLE = (219, 116, 243)
 
-# Initialize the font for the timer and button
+# Initialize the font for the timer, button, and message
 timer_font = pygame.font.Font(None, 36)
 button_font = pygame.font.Font(None, 24)
+message_font = pygame.font.Font(None, 200)
 
 # Load card back image
 card_back = pygame.image.load("card_back.png")
@@ -41,7 +45,7 @@ button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
 clock = pygame.time.Clock()
 
 def reset_game():
-    global card_images, board, start_time, first_card, second_card, non_matching_timer, all_matched, final_time
+    global card_images, board, start_time, first_card, second_card, non_matching_timer, all_matched, final_time, show_message
 
     # Generate new card images
     card_images = []
@@ -49,7 +53,7 @@ def reset_game():
         card_image = pygame.Surface((80, 120))
         card_image.fill(LIGHT_GRAY)
         pygame.draw.rect(card_image, WHITE, (10, 10, 60, 100), 2)
-        text = pygame.font.Font(None, 48).render(str(i + 1), True, RED)
+        text = pygame.font.Font(None, 48).render(str(i + 1), True, PINK1)
         card_image.blit(text, (20, 35))
         card_images.append(card_image)
         card_images.append(card_image)  # Duplicate each image
@@ -77,6 +81,7 @@ def reset_game():
     non_matching_timer = 0
     all_matched = False
     final_time = 0
+    show_message = False
 
 # Set up the game board
 num_cols = 4
@@ -144,6 +149,7 @@ while running:
     all_matched = check_all_matched()
     if all_matched and final_time == 0:
         final_time = pygame.time.get_ticks() - start_time
+        show_message = True
 
     # Clear the window
     window.fill(DARK_GRAY)
@@ -170,6 +176,21 @@ while running:
     timer_surface = timer_font.render(timer_text, True, WHITE)
     timer_rect = timer_surface.get_rect(topright=(window_width - 20, 20))  # Position: top-right
     window.blit(timer_surface, timer_rect)
+
+    # Draw the "Well done!" message and "Play Again" button
+    if show_message:
+        message_text = message_font.render("Well done!", True, PURPLE)
+        message_rect = message_text.get_rect(center=(window_width // 2, window_height // 2 - 50))
+        window.blit(message_text, message_rect)
+
+        play_again_button_rect = pygame.Rect(window_width // 2 - 75, window_height // 2 + 50, 150, 50)
+        pygame.draw.rect(window, LIGHT_PINK, play_again_button_rect)
+        play_again_text = button_font.render("Play Again", True, BLACK)
+        play_again_text_rect = play_again_text.get_rect(center=play_again_button_rect.center)
+        window.blit(play_again_text, play_again_text_rect)
+
+        if play_again_button_rect.collidepoint(mouse_x, mouse_y):
+            reset_game()
 
     # Update the display
     pygame.display.update()
