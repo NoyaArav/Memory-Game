@@ -35,6 +35,37 @@ card_back = pygame.image.load("card_back.png")
 match_sound = pygame.mixer.Sound("match_sound.wav")
 gameOver_sound = pygame.mixer.Sound("game_over_applause.wav")
 
+
+# Pre-game player selection
+one_player_button = pygame.Rect(window_width // 2 - 150, window_height // 2 - 60, 100, 50)
+two_player_button = pygame.Rect(window_width // 2 + 50, window_height // 2 - 60, 100, 50)
+num_players = 0
+current_player = 1
+
+# Pre-game loop for player selection
+while num_players == 0:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            exit()
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            mouse_x, mouse_y = event.pos
+            if one_player_button.collidepoint(mouse_x, mouse_y):
+                num_players = 1
+            elif two_player_button.collidepoint(mouse_x, mouse_y):
+                num_players = 2
+
+    window.fill(LIGHT_PINK)
+    pygame.draw.rect(window, FUCHSIA, one_player_button)
+    pygame.draw.rect(window, FUCHSIA, two_player_button)
+    one_player_text = button_font.render("1 Player", True, WHITE)
+    two_player_text = button_font.render("2 Players", True, WHITE)
+    window.blit(one_player_text, one_player_button.move(20, 10))
+    window.blit(two_player_text, two_player_button.move(10, 10))
+    pygame.display.update()
+    
+    
+
 # Set up the "Reset" button
 button_width = 100
 button_height = 50
@@ -68,7 +99,7 @@ def reset_game():
         row_cards = []
         for col in range(num_cols):
             x = col * (card_width + card_margin) + card_margin
-            y = row * (card_height + card_margin) + card_margin
+            y = row * (card_height + card_margin) + card_margin +60
             image_index = row * num_cols + col
             row_cards.append({"rect": pygame.Rect(x, y, card_width, card_height),
                                "image": card_images[image_index],
@@ -136,7 +167,12 @@ while running:
                     first_card = None
                     second_card = None
                     match_sound.play()  # Play the match sound
+                    if num_players == 2: # Optionally, let the current player continue if they found a match.
+                        pass  # current_player stays the same
                 else:
+                    # If the cards do not match and it's a 2-player game, switch turns
+                    if num_players == 2:
+                        current_player = 2 if current_player == 1 else 1
                     non_matching_timer = pygame.time.get_ticks()  # Start the timer
 
     # Check for non-matching cards to flip back
@@ -182,7 +218,6 @@ while running:
     # Draw the "Well done!" message and "Play Again" button
     if show_message:
         message_text = message_font.render("Well done!", True, PURPLE)
-        #message_rect = message_text.get_rect(center=(window_width // 2, window_height // 2 - 50))
         message_rect = message_text.get_rect(center=(window_width // 2, message_y))
         message_y -= 1  # Move the message up 5 pixels each frame
         gameOver_sound.play()
@@ -196,7 +231,6 @@ while running:
         
         window.blit(message_text, message_rect)
 
-        #play_again_button_rect = pygame.Rect(window_width // 2 - 75, window_height // 2 + 50, 150, 50)
         play_again_button_rect = pygame.Rect(window_width // 2 - 75, message_y + 100, 150, 50)
         pygame.draw.rect(window, LIGHT_PINK, play_again_button_rect)
         play_again_text = button_font.render("Play Again", True, BLACK)
@@ -207,6 +241,12 @@ while running:
             reset_game()
             show_message = False  # Hide message after reset
 
+    if num_players == 2:
+        player_turn_text = f"Player {current_player}'s Turn"
+        turn_surface = timer_font.render(player_turn_text, True, WHITE)
+        turn_rect = turn_surface.get_rect(center=(window_width // 2, 30))  # Position this at the top center
+        window.blit(turn_surface, turn_rect)
+    
     # Update the display
     pygame.display.update()
 
