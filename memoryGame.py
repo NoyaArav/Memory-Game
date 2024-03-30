@@ -33,6 +33,7 @@ card_back = pygame.image.load("card_back.png")
 
 # Load sound effects
 match_sound = pygame.mixer.Sound("match_sound.wav")
+gameOver_sound = pygame.mixer.Sound("game_over_applause.wav")
 
 # Set up the "Reset" button
 button_width = 100
@@ -100,6 +101,7 @@ def check_all_matched():
 
 # Game loop
 running = True
+message_y = window_height  # Initialize message to be off-screen
 while running:
     # Cap the frame rate
     clock.tick(60)
@@ -180,10 +182,22 @@ while running:
     # Draw the "Well done!" message and "Play Again" button
     if show_message:
         message_text = message_font.render("Well done!", True, PURPLE)
-        message_rect = message_text.get_rect(center=(window_width // 2, window_height // 2 - 50))
+        #message_rect = message_text.get_rect(center=(window_width // 2, window_height // 2 - 50))
+        message_rect = message_text.get_rect(center=(window_width // 2, message_y))
+        message_y -= 1  # Move the message up 5 pixels each frame
+        gameOver_sound.play()
+        
+        # Move the message up until it reaches the top of the screen
+        if message_y > 0:
+            message_y -= 5  # Move the message up 5 pixels each frame
+        else:
+            # Reset message_y to the bottom when it reaches the top
+            message_y = window_height
+        
         window.blit(message_text, message_rect)
 
-        play_again_button_rect = pygame.Rect(window_width // 2 - 75, window_height // 2 + 50, 150, 50)
+        #play_again_button_rect = pygame.Rect(window_width // 2 - 75, window_height // 2 + 50, 150, 50)
+        play_again_button_rect = pygame.Rect(window_width // 2 - 75, message_y + 100, 150, 50)
         pygame.draw.rect(window, LIGHT_PINK, play_again_button_rect)
         play_again_text = button_font.render("Play Again", True, BLACK)
         play_again_text_rect = play_again_text.get_rect(center=play_again_button_rect.center)
@@ -191,6 +205,7 @@ while running:
 
         if play_again_button_rect.collidepoint(mouse_x, mouse_y):
             reset_game()
+            show_message = False  # Hide message after reset
 
     # Update the display
     pygame.display.update()
