@@ -52,12 +52,6 @@ player_mode = 0
 current_player = 1
 
 
-# # Variables to manage the Time Attack mode
-# is_time_attack = False
-# time_limit = 60  # Starting with 60 seconds
-
-
-
 # Pre-game loop for player selection
 while player_mode == 0:
     
@@ -189,10 +183,7 @@ while running:
     elapsed_time = final_time if final_time != 0 else pygame.time.get_ticks() - start_time
     minutes = elapsed_time // 60000
     seconds = (elapsed_time % 60000) // 1000
-    # timer_text = f"{minutes:02}:{seconds:02}"  # Format: MM:SS
-    # timer_surface = timer_font.render(timer_text, True, WHITE)
-    # timer_rect = timer_surface.get_rect(topright=(window_width - 20, 20))  # Position: top-right
-    # window.blit(timer_surface, timer_rect)
+    
     
     if player_mode != 3:
         timer_text = f"{minutes:02}:{seconds:02}"  # Format: MM:SS
@@ -209,8 +200,6 @@ while running:
         remaining_time = time_attack_time - ((pygame.time.get_ticks() - start_time) // 1000)
         remaining_time = max(0, remaining_time)
         if remaining_time <= 0 and not game_over:
-            # game_over = True
-            # remaining_time = 0  
             game_over_text = message_font.render("Time's up!", True, WHITE)
             game_over_rect = game_over_text.get_rect(center=(window_width // 2, window_height // 2 - 50))
             background_rect = game_over_rect.inflate(40, 20)  
@@ -315,19 +304,6 @@ while running:
         turn_rect = turn_surface.get_rect(center=(window_width // 2, 30))  # Position this at the top center
         window.blit(turn_surface, turn_rect)
         
-    # # Timing and Time Attack Logic
-    # if is_time_attack:
-    #     remaining_time = time_attack_time - ((pygame.time.get_ticks() - start_time) // 1000)
-    #     remaining_time = max(0, remaining_time)
-    #     if elapsed_time > time_limit:
-    #         # Time's up, end the game logic goes here
-    #         show_message = True
-    #         game_message = "Time's Up!"
-
-    #     if all_matched:
-    #         time_limit -= 5
-    #         reset_game()
-    
     
             
     # Update the display

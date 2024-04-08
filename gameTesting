@@ -1,5 +1,9 @@
 import random
 import pygame
+from vosk import Model, KaldiRecognizer
+import json
+import sounddevice as sd
+import numpy as np
 
 # Initialize Pygame
 pygame.init()
@@ -23,6 +27,26 @@ PINK1 = (255, 136, 202)
 FUCHSIA = (255, 92, 170)
 PURPLE = (219, 116, 243)
 
+# Dictionary mapping words to their numeric values
+word_to_number = {
+    "one": 1,
+    "two": 2,
+    "to": 2,
+    "three": 3,
+    "four": 4,
+    "for": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "eleven": 11,
+    "twelve": 12,
+    #"reset": 17
+
+}
+
 # Initialize the font for the timer, button, and message
 timer_font = pygame.font.Font(None, 36)
 button_font = pygame.font.Font(None, 24)
@@ -40,6 +64,8 @@ gameOver_sound = pygame.mixer.Sound("game_over_applause.wav")
 one_player_button = pygame.Rect(window_width // 2 - 150, window_height // 2 - 60, 100, 50)
 two_player_button = pygame.Rect(window_width // 2 + 50, window_height // 2 - 60, 100, 50)
 time_attack_button = pygame.Rect(window_width // 2 - 150, window_height // 2 + 60, 150, 50)
+voice_control_button = pygame.Rect(window_width // 2 + 50, window_height // 2 + 60, 150, 50)
+
 # Set up the "Reset" button
 button_width = 100
 button_height = 50
@@ -51,10 +77,23 @@ button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
 player_mode = 0
 current_player = 1
 
+model = Model("vosk-model-small-en-us-0.15")
+recognizer = KaldiRecognizer(model, 16000)  # 16000 is the sample rate
 
-# # Variables to manage the Time Attack mode
-# is_time_attack = False
-# time_limit = 60  # Starting with 60 seconds
+# Function to process voice input and return text
+def recognize_speech_from_mic(recognizer, audio):
+    if recognizer.AcceptWaveform(audio):
+        result = json.loads(recognizer.Result())
+        return result.get('text', '')
+    return ''
+
+# Function to capture and process audio
+def capture_and_process_audio(recognizer, duration=1):
+    with sd.RawInputStream(samplerate=16000, blocksize=2048, dtype='int16', channels=1, callback=None) as stream:
+        audio_data = stream.read(int(16000 * duration))
+        audio_array = np.frombuffer(audio_data[0], dtype=np.int16)
+        return recognize_speech_from_mic(recognizer, audio_array.tobytes())
+
 
 
 
@@ -66,14 +105,18 @@ while player_mode == 0:
     pygame.draw.rect(window, FUCHSIA, one_player_button)
     pygame.draw.rect(window, FUCHSIA, two_player_button)
     pygame.draw.rect(window, RED, time_attack_button)
+    pygame.draw.rect(window, PURPLE, voice_control_button)
+
     # Add text to the buttons
     one_player_text = button_font.render("1 Player", True, WHITE)
     two_player_text = button_font.render("2 Players", True, WHITE)
     time_attack_text = button_font.render("Time Attack", True, WHITE)
+    voice_control_text = button_font.render("Voice Control", True, WHITE)
     window.blit(one_player_text, one_player_button.move(20, 10))
     window.blit(two_player_text, two_player_button.move(10, 10))
     window.blit(time_attack_text, (time_attack_button.x + 20, time_attack_button.y + 15))
-    
+    window.blit(voice_control_text, voice_control_text.get_rect(center=voice_control_button.center))
+
     pygame.display.update()
     
     for event in pygame.event.get():
@@ -89,6 +132,8 @@ while player_mode == 0:
             elif time_attack_button.collidepoint(mouse_x, mouse_y):
                 player_mode = 3
                 is_time_attack = True
+            elif voice_control_button.collidepoint((mouse_x, mouse_y)):
+                player_mode = 4
 
     
     
@@ -132,6 +177,7 @@ def reset_game():
     random.shuffle(card_images)
 
     # Reset the game board
+    card_number = 1
     board = []
     for row in range(num_rows):
         row_cards = []
@@ -141,7 +187,9 @@ def reset_game():
             image_index = row * num_cols + col
             row_cards.append({"rect": pygame.Rect(x, y, card_width, card_height),
                                "image": card_images[image_index],
-                               "visible": False})
+                               "visible": False,
+                               "number": card_number})
+            card_number += 1
         board.append(row_cards)
 
     
@@ -182,17 +230,17 @@ while running:
                 window.blit(card["image"], card["rect"])
             else:
                 window.blit(card_back, card["rect"])
-
+            if player_mode == 4:
+                card_number_text = button_font.render(str(card['number']), True, BLACK)
+                card_number_text_rect = card_number_text.get_rect(center=card['rect'].center)
+                window.blit(card_number_text, card_number_text_rect)
     
 
     # Calculate elapsed time for the timer
     elapsed_time = final_time if final_time != 0 else pygame.time.get_ticks() - start_time
     minutes = elapsed_time // 60000
     seconds = (elapsed_time % 60000) // 1000
-    # timer_text = f"{minutes:02}:{seconds:02}"  # Format: MM:SS
-    # timer_surface = timer_font.render(timer_text, True, WHITE)
-    # timer_rect = timer_surface.get_rect(topright=(window_width - 20, 20))  # Position: top-right
-    # window.blit(timer_surface, timer_rect)
+    
     
     if player_mode != 3:
         timer_text = f"{minutes:02}:{seconds:02}"  # Format: MM:SS
@@ -205,12 +253,16 @@ while running:
         button_text_rect = button_text.get_rect(center=button_rect.center)
         window.blit(button_text, button_text_rect)
     
+    if player_mode == 2:
+        player_turn_text = f"Player {current_player}'s Turn"
+        turn_surface = timer_font.render(player_turn_text, True, WHITE)
+        turn_rect = turn_surface.get_rect(center=(window_width // 2, 30))  # Position this at the top center
+        window.blit(turn_surface, turn_rect)
+    
     if player_mode == 3:
         remaining_time = time_attack_time - ((pygame.time.get_ticks() - start_time) // 1000)
         remaining_time = max(0, remaining_time)
         if remaining_time <= 0 and not game_over:
-            # game_over = True
-            # remaining_time = 0  
             game_over_text = message_font.render("Time's up!", True, WHITE)
             game_over_rect = game_over_text.get_rect(center=(window_width // 2, window_height // 2 - 50))
             background_rect = game_over_rect.inflate(40, 20)  
@@ -220,6 +272,40 @@ while running:
         time_attack_surface = timer_font.render(time_attack_text, True, WHITE)
         time_attack_rect = time_attack_surface.get_rect(topright=(window_width - 20, 20))
         window.blit(time_attack_surface, time_attack_rect)
+    
+    def flip_card(card):
+        if not card["visible"]:
+            card["visible"] = True
+            window.blit(card["image"], card["rect"])
+    
+    if player_mode == 4:  # Voice control mode
+        speech_text = capture_and_process_audio(recognizer)
+        print(speech_text)  # For debugging, see what text is recognized
+        try:
+            spoken_number = int(speech_text.strip())
+            print(spoken_number) # For debugging
+            spoken_number_num = word_to_number.get(spoken_number, None)
+            print(spoken_number_num)
+            card_to_flip = next((card for row in board for card in row if card["number"] == spoken_number_num and not card["visible"]), None)
+            if card_to_flip:
+                flip_card(card_to_flip)
+                #card_to_flip["visible"] = True
+                #window.blit(card_to_flip["image"], card_to_flip["rect"])
+            #     flip_card_animation(card_to_flip, flip_to_color=True)
+            #     flipped_cards.append(card_to_flip)
+            #     if len(flipped_cards) == 2:
+            #         # Your existing logic to handle flipped cards
+            #         if flipped_cards[0]['value'] == flipped_cards[1]['value']:
+            #             found_pairs.extend(flipped_cards)
+            #             positive_sound.play()
+            #         else:
+            #             pygame.time.wait(300)
+            #             flip_card_animation(flipped_cards[0], flip_to_color=False)
+            #             flip_card_animation(flipped_cards[1], flip_to_color=False)
+            #         flipped_cards = []
+        except ValueError:
+            # Handle the case where speech_text is not a number
+            pass
     
     # Cap the frame rate
     clock.tick(60)
@@ -309,25 +395,8 @@ while running:
             reset_game()
             show_message = False  # Hide message after reset
 
-    if player_mode == 2:
-        player_turn_text = f"Player {current_player}'s Turn"
-        turn_surface = timer_font.render(player_turn_text, True, WHITE)
-        turn_rect = turn_surface.get_rect(center=(window_width // 2, 30))  # Position this at the top center
-        window.blit(turn_surface, turn_rect)
-        
-    # # Timing and Time Attack Logic
-    # if is_time_attack:
-    #     remaining_time = time_attack_time - ((pygame.time.get_ticks() - start_time) // 1000)
-    #     remaining_time = max(0, remaining_time)
-    #     if elapsed_time > time_limit:
-    #         # Time's up, end the game logic goes here
-    #         show_message = True
-    #         game_message = "Time's Up!"
-
-    #     if all_matched:
-    #         time_limit -= 5
-    #         reset_game()
     
+        
     
             
     # Update the display
