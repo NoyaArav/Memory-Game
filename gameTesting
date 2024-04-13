@@ -80,6 +80,22 @@ current_player = 1
 model = Model("vosk-model-small-en-us-0.15")
 recognizer = KaldiRecognizer(model, 16000)  # 16000 is the sample rate
 
+def flip_card_animation(card, flip_to_color=True):
+    flip_speed = 10  # Adjust this value to change the animation speed
+    flip_width = 0
+    
+    while flip_width <= card_width:
+        if flip_to_color:
+            window.blit(card["image"], card["rect"])
+            pygame.draw.rect(window, DARK_GRAY, (card["rect"].x + flip_width, card["rect"].y, card_width - flip_width, card_height))
+        else:
+            window.blit(card_back, card["rect"])
+            pygame.draw.rect(window, WHITE, (card["rect"].x, card["rect"].y, flip_width, card_height))
+        
+        pygame.display.update(card["rect"])
+        flip_width += flip_speed
+        clock.tick(60)
+
 # Function to process voice input and return text
 def recognize_speech_from_mic(recognizer, audio):
     if recognizer.AcceptWaveform(audio):
